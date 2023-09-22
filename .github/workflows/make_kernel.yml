@@ -56,8 +56,8 @@ jobs:
       if: github.event.inputs.USE_KERNELSU == 'true'
       run: |
         cd android-kernel
-        git apply ../KernelSU.patch
         curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
+        #git apply ../KernelSU.patch
             
     - name: 编译内核
       run: |
