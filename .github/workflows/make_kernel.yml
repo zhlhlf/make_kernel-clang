@@ -66,15 +66,11 @@ jobs:
         echo "----------------------------"
         sed s/CONFIG_LOCALVERSION=".*"/'CONFIG_LOCALVERSION="-perf-ksu-zhlhlf"'/g out/.config >>.config1
         rm -rf out/.config
-        if [ ${{ github.event.inputs.ksu_path_or_KPROBES }} = false ] && [ ${{ github.event.inputs.USE_KERNELSU }} = false ];then echo -e "CONFIG_KPROBES=y\nCONFIG_HAVE_KPROBES=y\nCONFIG_KPROBE_EVENTS=y\nCONFIG_MODULES=y" >>.config1 ; echo "kprobes----------" ; fi 
         mv .config1 out/.config
-        echo "----------------------------"        
-        cat out/.config | grep KPROBES
-        cat out/.config | grep CONFIG_MODULES
-        echo "----------------------------"        
         make O=out -j$(nproc --all) CC="ccache clang" CXX="ccache clang++" ARCH=arm64 CROSS_COMPILE=$CLANG_PATH/bin/aarch64-linux-gnu- CROSS_COMPILE_ARM32=$CLANG_PATH/bin/arm-linux-gnueabi- LD=ld.lld 2>&1 | tee kernel.log               
         echo "----------------------"
         echo "----------------------"
+        rm -rf AnyKernel3
         git clone --depth=1 https://github.com/zhlhlf/AnyKernel3 AnyKernel3
         rm -rf AnyKernel3/.git
         mv out/arch/arm64/boot/dtbo.img AnyKernel3/ || echo "没有dtbo.img"
@@ -85,7 +81,7 @@ jobs:
         mkdir ../../666 || echo ""
         cp -r kernel_$(TZ=Asia/Shanghai date "+%Y%m%d%H%M").zip ../../666
 
-    - name: 编译ksu内核
+    - name: 加入ksu内核
       run: |
         cd android-kernel
         export CLANG_PATH=$GITHUB_WORKSPACE/clang
@@ -111,6 +107,7 @@ jobs:
         make O=out -j$(nproc --all) CC="ccache clang" CXX="ccache clang++" ARCH=arm64 CROSS_COMPILE=$CLANG_PATH/bin/aarch64-linux-gnu- CROSS_COMPILE_ARM32=$CLANG_PATH/bin/arm-linux-gnueabi- LD=ld.lld 2>&1 | tee kernel.log               
         echo "----------------------"
         echo "----------------------"
+        rm -rf AnyKernel3
         git clone --depth=1 https://github.com/zhlhlf/AnyKernel3 AnyKernel3
         rm -rf AnyKernel3/.git
         mv out/arch/arm64/boot/dtbo.img AnyKernel3/ || echo "没有dtbo.img"
