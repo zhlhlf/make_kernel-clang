@@ -7,12 +7,12 @@ on:
       KERNEL_SOURCE:
         description: 'Kernel Source'
         required: true
-        default: 'https://github.com/Project-Zephyrus/meteoric_kernel'
+        default: 'https://github.com/crdroidandroid/android_kernel_oneplus_sm8250'
         
       KERNEL_SOURCE_BRANCH:
         description: 'Branch'
         required: true
-        default: 'rvc'
+        default: '12L'
         
       KERNEL_DEFCONFIG:
         description: 'Defconfig'
@@ -99,7 +99,7 @@ jobs:
         cd AnyKernel3
         zip -r kernel_$(TZ=Asia/Shanghai date "+%Y%m%d%H%M").zip *
         mkdir ../../666 || echo ""
-        mv kernerl*zip ../../666
+        cp -r kernel_$(TZ=Asia/Shanghai date "+%Y%m%d%H%M").zip ../../666
 
     - name: 上传到onedrive
       run: |
