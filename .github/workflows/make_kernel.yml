@@ -86,6 +86,10 @@ jobs:
         mv out/arch/arm64/boot/dtbo.img AnyKernel3/ || echo "没有dtbo.img"
         mv out/arch/arm64/boot/Image AnyKernel3/
         mv kernel.log AnyKernel3/
+        cd AnyKernel3
+        zip -r kernel_$(TZ=Asia/Shanghai date "+%Y%m%d%H%M").zip *
+        mkdir ../../666 || echo ""
+        mv kernerl*zip ../../666
 
     - name: 上传到onedrive
       run: |
