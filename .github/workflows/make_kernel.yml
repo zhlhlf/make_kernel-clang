@@ -98,7 +98,7 @@ jobs:
         rm -rf out/.config
         curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -
         if [ ${{ github.event.inputs.ksu_path_or_KPROBES }} = true ];then git apply ../KernelSU.patch ; echo "path----------" ; fi 
-        if [ ${{ github.event.inputs.ksu_path_or_KPROBES }} = false ];then echo -e "CONFIG_KPROBES=y\nCONFIG_HAVE_KPROBES=y\nCONFIG_KPROBE_EVENTS=y\nCONFIG_MODULES=y" >>.config1 ; echo "kprobes----------" ; fi 
+        if [ ${{ github.event.inputs.ksu_path_or_KPROBES }} = false ];then echo -e "CONFIG_KPROBES=y\nCONFIG_HAVE_KPROBES=y\nCONFIG_KPROBE_EVENTS=y\nCONFIG_MODULES=y\nCONFIG_MODULE_FORCE_LOAD=y\nCONFIG_SECURITY_SELINUX_DEVELOP=y\nCONFIG_DM_VERITY=y\nCONFIG_DM_VERITY_AVB=y" >>.config1 ; echo "kprobes----------" ; fi 
         mv .config1 out/.config
         echo "----------------------------"        
         cat out/.config | grep KPROBES
