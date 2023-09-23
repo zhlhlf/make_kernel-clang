@@ -81,7 +81,7 @@ jobs:
         mkdir ../../666 || echo ""
         cp -r kernel_$(TZ=Asia/Shanghai date "+%Y%m%d%H%M").zip ../../666
 
-    - name: 加入ksu内核
+    - name: 加入ksu编译内核
       run: |
         cd android-kernel
         export CLANG_PATH=$GITHUB_WORKSPACE/clang
