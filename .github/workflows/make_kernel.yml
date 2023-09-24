@@ -65,7 +65,7 @@ jobs:
         export KBUILD_BUILD_HOST=zhlhlf_linux
         export KBUILD_BUILD_USER=zhlhlf
         end
-        source buildenv6.sh
+        source buildenv.sh
 
         args="-j$(nproc --all) \
         O=out \
