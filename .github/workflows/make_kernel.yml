@@ -54,8 +54,6 @@ jobs:
     - name: 编译内核
       run: |
         cd android-kernel
-
-        cat >> buildenv.sh <<end
         export CLANG_PATH=$GITHUB_WORKSPACE/clang
         export PATH=${CLANG_PATH}/bin:${PATH}
         export CLANG_TRIPLE=aarch64-linux-gnu-
@@ -64,9 +62,6 @@ jobs:
         export KBUILD_COMPILER_STRING="$(clang --version | head -n 1 )"
         export KBUILD_BUILD_HOST=zhlhlf_linux
         export KBUILD_BUILD_USER=zhlhlf
-        end
-        source buildenv.sh
-
         args="-j$(nproc --all) \
         O=out \
         ARCH=arm64 \
@@ -104,10 +99,8 @@ jobs:
         cp -r kernel_${1}_$(TZ=Asia/Shanghai date "+%Y%m%d%H%M").zip ../../666
         end
         sh AnyKernel3.sh
-
-    - name: 加入ksu编译内核
-      run: |
-        cd android-kernel
+        echo -e "\n\n\n\n"
+        echo "--------------加入ksu编译-----------------"
         make O=out CC="ccache clang" CXX="ccache clang++" ARCH=arm64 CROSS_COMPILE=$CLANG_PATH/bin/aarch64-linux-gnu- CROSS_COMPILE_ARM32=$CLANG_PATH/bin/arm-linux-gnueabi- LD=ld.lld ${{ github.event.inputs.KERNEL_DEFCONFIG }}
         echo "----------------------------"
         sed s/CONFIG_LOCALVERSION=".*"/'CONFIG_LOCALVERSION="-perf-ksu-zhlhlf"'/g out/.config >>.config1
@@ -116,10 +109,10 @@ jobs:
         if [ ${{ github.event.inputs.ksu_path_or_KPROBES }} = true ];then git apply ../KernelSU.patch ; echo "path----------" ; fi 
         if [ ${{ github.event.inputs.ksu_path_or_KPROBES }} = false ];then echo -e "CONFIG_KPROBES=y\nCONFIG_HAVE_KPROBES=y\nCONFIG_KPROBE_EVENTS=y\nCONFIG_MODULES=y\nCONFIG_MODULE_FORCE_LOAD=y\nCONFIG_SECURITY_SELINUX_DEVELOP=y\nCONFIG_DM_VERITY=y\nCONFIG_DM_VERITY_AVB=y" >>.config1 ; echo "kprobes----------" ; fi 
         mv .config1 out/.config
-        echo "----------------------------"        
+        echo "----------------------------"
         cat out/.config | grep KPROBES
         cat out/.config | grep CONFIG_MODULES
-        echo "----------------------------"        
+        echo "----------------------------"
         make O=out -j$(nproc --all) CC="ccache clang" CXX="ccache clang++" ARCH=arm64 CROSS_COMPILE=$CLANG_PATH/bin/aarch64-linux-gnu- CROSS_COMPILE_ARM32=$CLANG_PATH/bin/arm-linux-gnueabi- LD=ld.lld 2>&1 | tee kernel.log               
         echo "----------------------"
         echo "----------------------"
