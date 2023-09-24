@@ -55,7 +55,7 @@ jobs:
       run: |
         cd android-kernel
 
-        sudo cat >> ~/.bashrc <<end
+        cat >> buildenv.sh <<end
         export CLANG_PATH=$GITHUB_WORKSPACE/clang
         export PATH=${CLANG_PATH}/bin:${PATH}
         export CLANG_TRIPLE=aarch64-linux-gnu-
@@ -65,7 +65,23 @@ jobs:
         export KBUILD_BUILD_HOST=zhlhlf_linux
         export KBUILD_BUILD_USER=zhlhlf
         end
-        source /etc/profile
+        source buildenv6.sh
+
+        args="-j$(nproc --all) \
+        O=out \
+        ARCH=arm64 \
+        CLANG_TRIPLE=aarch64-linux-gnu- \
+        CROSS_COMPILE=${CLANG_PATH}/bin/aarch64-linux-gnu- \
+        CC=${CLANG_PATH}/bin/clang \
+        CROSS_COMPILE_COMPAT=${CLANG_PATH}/bin/arm-linux-gnueabi- \
+        AR=${CLANG_PATH}/bin/llvm-ar \
+        NM=${CLANG_PATH}/bin/llvm-nm \
+        LLVM_AR=${CLANG_PATH}/bin/llvm-ar \
+        LLVM_NM=${CLANG_PATH}/bin/llvm-nm \
+        OBJCOPY=${CLANG_PATH}/bin/llvm-objcopy \
+        OBJDUMP=${CLANG_PATH}/bin/llvm-objdump \
+        STRIP=${CLANG_PATH}/bin/llvm-strip \
+        LD=${CLANG_PATH}/bin/ld.lld "
 
         make O=out CC="ccache clang" CXX="ccache clang++" ARCH=arm64 CROSS_COMPILE=$CLANG_PATH/bin/aarch64-linux-gnu- CROSS_COMPILE_ARM32=$CLANG_PATH/bin/arm-linux-gnueabi- LD=ld.lld ${{ github.event.inputs.KERNEL_DEFCONFIG }}
         echo "----------------------------"
