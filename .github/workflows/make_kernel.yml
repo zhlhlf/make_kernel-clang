@@ -55,7 +55,7 @@ jobs:
       run: |
         cd android-kernel
 
-        sudo cat >> /etc/profile <<end
+        sudo cat >> ~/.bashrc <<end
         export CLANG_PATH=$GITHUB_WORKSPACE/clang
         export PATH=${CLANG_PATH}/bin:${PATH}
         export CLANG_TRIPLE=aarch64-linux-gnu-
