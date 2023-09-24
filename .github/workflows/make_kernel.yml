@@ -62,6 +62,7 @@ jobs:
         export KBUILD_COMPILER_STRING="$(clang --version | head -n 1 )"
         export KBUILD_BUILD_HOST=zhlhlf_linux
         export KBUILD_BUILD_USER=zhlhlf
+
         args="-j$(nproc --all) \
         O=out \
         ARCH=arm64 \
@@ -78,14 +79,15 @@ jobs:
         STRIP=${CLANG_PATH}/bin/llvm-strip \
         LD=${CLANG_PATH}/bin/ld.lld "
 
-        make O=out CC="ccache clang" CXX="ccache clang++" ARCH=arm64 CROSS_COMPILE=$CLANG_PATH/bin/aarch64-linux-gnu- CROSS_COMPILE_ARM32=$CLANG_PATH/bin/arm-linux-gnueabi- LD=ld.lld ${{ github.event.inputs.KERNEL_DEFCONFIG }}
+
+
+        make $args ${{ github.event.inputs.KERNEL_DEFCONFIG }}
         echo "----------------------------"
         sed s/CONFIG_LOCALVERSION=".*"/'CONFIG_LOCALVERSION="-perf-ksu-zhlhlf"'/g out/.config >>.config1
         rm -rf out/.config
         mv .config1 out/.config
-        make O=out -j$(nproc --all) CC="ccache clang" CXX="ccache clang++" ARCH=arm64 CROSS_COMPILE=$CLANG_PATH/bin/aarch64-linux-gnu- CROSS_COMPILE_ARM32=$CLANG_PATH/bin/arm-linux-gnueabi- LD=ld.lld 2>&1 | tee kernel.log               
-        echo "----------------------"
-        echo "----------------------"
+        make $args 2>&1 | tee kernel.log    
+
         cat >> AnyKernel3.sh <<end
         rm -rf AnyKernel3
         git clone --depth=1 https://github.com/zhlhlf/AnyKernel3 AnyKernel3
@@ -99,6 +101,7 @@ jobs:
         cp -r kernel_${1}_$(TZ=Asia/Shanghai date "+%Y%m%d%H%M").zip ../../666
         end
         sh AnyKernel3.sh
+        
         echo -e "\n\n\n\n"
         echo "--------------加入ksu编译-----------------"
         make O=out CC="ccache clang" CXX="ccache clang++" ARCH=arm64 CROSS_COMPILE=$CLANG_PATH/bin/aarch64-linux-gnu- CROSS_COMPILE_ARM32=$CLANG_PATH/bin/arm-linux-gnueabi- LD=ld.lld ${{ github.event.inputs.KERNEL_DEFCONFIG }}
@@ -114,7 +117,6 @@ jobs:
         cat out/.config | grep CONFIG_MODULES
         echo "----------------------------"
         make O=out -j$(nproc --all) CC="ccache clang" CXX="ccache clang++" ARCH=arm64 CROSS_COMPILE=$CLANG_PATH/bin/aarch64-linux-gnu- CROSS_COMPILE_ARM32=$CLANG_PATH/bin/arm-linux-gnueabi- LD=ld.lld 2>&1 | tee kernel.log               
-        echo "----------------------"
         echo "----------------------"
         sh AnyKernel3.sh KernelSU
 
