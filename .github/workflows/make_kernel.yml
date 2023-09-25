@@ -70,7 +70,7 @@ jobs:
         mv .config1 out/.config
         make O=out -j$(nproc --all) CC="ccache clang" CXX="ccache clang++" ARCH=arm64 CROSS_COMPILE=$CLANG_PATH/bin/aarch64-linux-gnu- CROSS_COMPILE_ARM32=$CLANG_PATH/bin/arm-linux-gnueabi- LD=ld.lld 2>&1 | tee kernel.log
 
-        cat >> AnyKernel3.sh <<end
+        cat > AnyKernel3.sh <<end
         rm -rf AnyKernel3
         git clone --depth=1 https://github.com/zhlhlf/AnyKernel3 AnyKernel3
         rm -rf AnyKernel3/.git
@@ -78,11 +78,11 @@ jobs:
         mv out/arch/arm64/boot/Image AnyKernel3/
         mv kernel.log AnyKernel3/
         cd AnyKernel3
-        zip -r kernel-$1-$(TZ=Asia/Shanghai date "+%Y%m%d%H%M").zip *
+        zip -r kernel-\$1-$(TZ=Asia/Shanghai date "+%Y%m%d%H%M").zip *
         mkdir ../../666 || echo ""
-        cp -r kernel-$1-$(TZ=Asia/Shanghai date "+%Y%m%d%H%M").zip ../../666
+        cp -r kernel-\$1-$(TZ=Asia/Shanghai date "+%Y%m%d%H%M").zip ../../666
         end
-        sh AnyKernel3.sh "-"
+        sh AnyKernel3.sh 
         
         echo -e "\n\n\n\n"
         echo "--------------加入ksu编译-----------------"
