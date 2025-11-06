@@ -1,0 +1,226 @@
+name: make kernel
+
+on:
+  workflow_dispatch:
+
+    inputs:
+       
+      build_ko:
+        required: true
+        type: boolean
+        default: false
+        
+      ksu_v:
+        required: true
+        type: string
+        default: v0.9.5
+        description: >
+          ksu branch 
+          
+      KERNEL_SOURCE:
+        description: 'Kernel Source'
+        required: true
+        default: 'https://github.com/HELLBOY017/kernel_oneplus_sm8250'
+        
+      KERNEL_SOURCE_BRANCH:
+        description: 'Branch'
+        required: true
+        default: 'V12'
+        
+      KERNEL_DEFCONFIG:
+        description: 'Defconfig'
+        required: true
+        default: 'vendor/kona-perf_defconfig'
+
+      CLANG_s:
+        description: 'Clang  [14..]  or url'
+        required: true
+        default: '17'      
+
+      shell:
+        description: 'shell'
+        required: false
+        default: '# curl -SL http://raw.github.com/zhlhlf/text/main/ssh.sh | sudo bash'      
+      
+      zip_name:
+        description: 'zip name'
+        required: true
+        default: 'oos' 
+      
+      ksu_path_or_KPROBES:
+        description: '[0，1，2，3, 4]->[path-su,kprobes-su,only-path-su,only-kprobes-su,no-su]'
+        required: true
+        default: '2'
+
+      upload:
+        description: '[0,1]->[one,release]'
+        required: true
+        default: '0' 
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 更改交换空间并link构建空间
+      uses: zhlhlf/maximize-build-space@master
+      with:
+        swap-size-mb: 8192
+    - uses: actions/checkout@v3
+
+    - name: 配置环境
+      run: |
+        echo "BUILD_TIME=$(TZ=Asia/Shanghai date "+%Y%m%d%H%M")" >> $GITHUB_ENV
+        echo "DEVICE=$(echo ${{ inputs.KERNEL_DEFCONFIG }} | sed 's!vendor/!!;s/_defconfig//;s/_user//;s/-perf//')" >> $GITHUB_ENV
+        sudo apt-get update
+        sudo apt-get install git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev g++-multilib libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl bc libc6-dev-i386 libx11-dev lib32z-dev libgl1-mesa-dev xsltproc unzip device-tree-compiler python3
+
+    - name: 下载clang和内核源
+      run: |
+        mkdir clang
+        if [ "$(echo ${{ inputs.CLANG_s }} | grep -i "http")" ];then
+        echo "clang 提供的是url"
+        echo ${{ inputs.CLANG_s }} > url.txt
+        else
+        echo "clang 提供的不是url 或是版本号${{ inputs.CLANG_s }} 将从库寻找并下载响应的clang"
+        curl "https://github.com/ZyCromerZ/Clang/releases?q=${{ inputs.CLANG_s }}&expanded=true" | grep 'https://github.com/ZyCromerZ/Clang/releases/expanded_assets/' | sed -n 1p | awk -F'"' '{print $6}' > clang_url.txt 
+        curl $(cat clang_url.txt) | grep ".tar.gz" | awk -F'"' '{print $2}' | sed -n 1p > url.txt && echo "https://github.com$(sed -n 1p url.txt)" > url.txt
+        fi
+        aria2c -j10 $(sed -n 1p url.txt) -o clang.tar.gz
+        tar -C clang/ -zxf clang.tar.gz
+        echo "clang_url=$(cat url.txt)" >> $GITHUB_ENV
+        rm -rf clang_url.txt url.txt clang.tar.gz
+        git clone --depth=1 ${{ inputs.KERNEL_SOURCE }} -b ${{ inputs.KERNEL_SOURCE_BRANCH }} android-kernel
+        cd android-kernel
+        if [ -f ".gitmodules" ];then sed -i s#'git@github.com:'#'https://github.com/'#g .gitmodules; fi
+        git submodule init
+        git submodule update 
+        ${{ inputs.shell }}
+       
+    - name: 编译内核
+      run: |
+        cd android-kernel
+        export CLANG_PATH=$GITHUB_WORKSPACE/clang
+        export PATH=${CLANG_PATH}/bin:${PATH}
+        export CLANG_TRIPLE=aarch64-linux-gnu-
+        export ARCH=arm64
+        export SUBARCH=arm64
+        export KBUILD_COMPILER_STRING="$(clang --version | head -n 1 )"
+        export KBUILD_BUILD_HOST=zhlhlf-linux
+        export KBUILD_BUILD_USER=zhlhlf  
+        
+        cat > AnyKernel3.sh <<end
+        rm -rf AnyKernel3
+        git clone --depth=1 https://github.com/zhlhlf/AnyKernel3 AnyKernel3
+        rm -rf AnyKernel3/.git
+        mv out/arch/arm64/boot/dtbo.img AnyKernel3/ || mv out/arch/arm64/boot/dtbo AnyKernel3/ || echo "没有dtbo*"
+        mv out/arch/arm64/boot/Image AnyKernel3/ || mv out/arch/arm64/boot/Image.gz AnyKernel3/ || exit 0
+        cp -r kernel*.log AnyKernel3/
+        cd AnyKernel3
+        echo "source : ${{ inputs.KERNEL_SOURCE }} \n source_branch : ${{ inputs.KERNEL_SOURCE_BRANCH }} \n deconfig : ${{ inputs.KERNEL_DEFCONFIG }} \n clang_url : ${{ env.clang_url }} \n" > meta.txt
+        zip -r \$1-\$2-$(TZ=Asia/Shanghai date "+%Y-%m-%d").zip *
+        mkdir ../../666 || echo ""
+        mv \$1-\$2-$(TZ=Asia/Shanghai date "+%Y-%m-%d").zip ../../666
+        end
+        
+        if [ ${{ inputs.ksu_path_or_KPROBES }} == "0" ] || [ ${{ inputs.ksu_path_or_KPROBES }} == "1" ] || [ ${{ inputs.ksu_path_or_KPROBES }} == "4" ];then
+        make O=out -j$(nproc --all) CC="ccache clang" CXX="ccache clang++" ARCH=arm64 CROSS_COMPILE=$CLANG_PATH/bin/aarch64-linux-gnu- CROSS_COMPILE_ARM32=$CLANG_PATH/bin/arm-linux-gnueabi- LD=ld.lld ${{ inputs.KERNEL_DEFCONFIG }}
+        echo "\n----------------------------"
+        sed s/CONFIG_LOCALVERSION=".*"/'CONFIG_LOCALVERSION="-perf-ksu-zhlhlf"'/g out/.config >>.config1
+        rm -rf out/.config
+        mv .config1 out/.config
+        make O=out -j$(nproc --all) CC="ccache clang" CXX="ccache clang++" ARCH=arm64 CROSS_COMPILE=$CLANG_PATH/bin/aarch64-linux-gnu- CROSS_COMPILE_ARM32=$CLANG_PATH/bin/arm-linux-gnueabi- LD=ld.lld || exit 2>&1 | tee kernel.log
+        sh AnyKernel3.sh ${{ inputs.zip_name }}
+        fi
+
+        if [ ${{ inputs.ksu_path_or_KPROBES }} == "0" ] || [ ${{ inputs.ksu_path_or_KPROBES }} == "1" ] || [ ${{ inputs.ksu_path_or_KPROBES }} == "2" ] || [ ${{ inputs.ksu_path_or_KPROBES }} == "3" ];then
+        echo -e "\n\n\n\n"
+        echo "\n\n--------------加入ksu编译-----------------"
+        rm -rf KernelSU drivers/ksu
+        sed -i s/'.*CONFIG_KERNELSU.*'//g drivers/Makefile
+        sed -i '/menu "KernelSU"/,/endmenu/d' drivers/Kconfig
+        sed -i s/'obj-y.*+=.*ksu.*'//g drivers/Makefile
+        curl -LSs "https://raw.githubusercontent.com/tiann/KernelSU/main/kernel/setup.sh" | bash -s ${{ inputs.ksu_v }}
+        make O=out CC="ccache clang" CXX="ccache clang++" ARCH=arm64 CROSS_COMPILE=$CLANG_PATH/bin/aarch64-linux-gnu- CROSS_COMPILE_ARM32=$CLANG_PATH/bin/arm-linux-gnueabi- LD=ld.lld ${{ inputs.KERNEL_DEFCONFIG }}
+        echo "\n----------------------------"
+        gg="$(cat out/.config | sed -n 's/.*CONFIG_LOCALVERSION="\([^"]*\).*/\1/p')_ksu"
+        sed s/CONFIG_LOCALVERSION=".*"/CONFIG_LOCALVERSION=\"$gg\"/g out/.config >>.config1
+        rm -rf out/.config
+
+        hh1="
+        CONFIG_MODULES=y
+        CONFIG_MODULE_SIG=n
+        CONFIG_MODULE_SIG_FORCE=n
+        CONFIG_MODULE_UNLOAD=y
+        CONFIG_MODVERSIONS=n
+        CONFIG_MODULE_FORCE_LOAD=y
+        CONFIG_SECURITY_SELINUX_DEVELOP=y
+        CONFIG_DM_VERITY=y
+        CONFIG_DM_VERITY_AVB=y
+        "
+        if [ ${{ inputs.build_ko }} = "true" ];then 
+        echo "\n\n----------------------"
+        echo "编译ko  补丁中"
+        sed -i s/'obj-.*kernelsu.o'/'obj-m += kernelsu.o'/g KernelSU/kernel/Makefile
+        #取消ksu patch内核补丁
+        bash ../patches.sh zhlhlf
+        
+        echo "[+] Add KernelSU symbols"
+        # python3 KernelSU/scripts/abi_gki_all.py android/abi_gki_aarch64.xml > android/abi_gki_aarch64.xml
+        cat KernelSU/kernel/export_symbol.txt | awk '{sub("[ \t]+","");print "  "$0}' >> android/abi_gki_aarch64
+        
+        #去模块生成error
+        #sed -i s/'static int warn_unresolved = 0'/'static int warn_unresolved = 1'/g scripts/mod/modpost.c
+       
+        echo "\n----------------------"   
+        else
+        if [ ${{ inputs.ksu_path_or_KPROBES }} = '0' ] || [ ${{ inputs.ksu_path_or_KPROBES }} = '2' ];then bash ../patches.sh ; echo "path----------" ; fi 
+        if [ ${{ inputs.ksu_path_or_KPROBES }} = '1' ] || [ ${{ inputs.ksu_path_or_KPROBES }} = '3' ];then for i in $hh; do echo $i >> .config1; done; echo "kprobes----------" ; fi 
+        fi
+        
+        hh="
+        CONFIG_KPROBES=y
+        CONFIG_HAVE_KPROBES=y
+        CONFIG_KPROBE_EVENTS=y
+        "
+    
+        #去模块签名、版本检验
+        sed -i s/'return strcmp(amagic, bmagic) == 0;'/'return 1;'/g kernel/module.c
+        #sed -i s/'err = check_modinfo(info->mod, info, flags);'/'err=0;'/g kernel/module.c
+
+        for i in $hh1; do echo $i >> .config1; done; echo "add config----------"
+        mv .config1 out/.config
+        echo "\n\n----------------------------"
+        cat out/.config | grep KPROBES
+        cat out/.config | grep CONFIG_MODULES
+        echo "\n----------------------------"
+        make O=out -j$(nproc --all) CC="ccache clang" CXX="ccache clang++" ARCH=arm64 CROSS_COMPILE=$CLANG_PATH/bin/aarch64-linux-gnu- CROSS_COMPILE_ARM32=$CLANG_PATH/bin/arm-linux-gnueabi- LD=ld.lld 2>&1 | tee kernel_ksu.log               
+        oo=$(cat kernel_ksu.log | grep 'KernelSU version' | sed -n 1p | awk '{print $4}') ; echo "KSUV=$oo" >> $GITHUB_ENV ; echo "KSUV=$oo" ;
+        sh AnyKernel3.sh  "${{ inputs.zip_name }}_$oo" "ksu"
+        fi
+        if [ ! "$(ls ../666/ | grep -i ".zip")" ];then exit ; fi
+        cp -r `find -name "kernelsu.ko" | sed -n 1p` ../666/ || echo "no found kernelsu.ko"
+        echo "\n\n----------------------"
+        echo ""
+        ls ../666
+        echo "\n----------------------"   
+        
+    - name: 上传到release
+      if: inputs.upload  == '1'
+      uses: ncipollo/release-action@v1
+      with:
+          tag: "${{ env.DEVICE }}_${{ github.run_number }}_${{ env.KSUV }}"
+          name: "${{ env.DEVICE }}_${{ github.run_number }}_${{ env.KSUV }}"
+          body: |
+            source : ${{ inputs.KERNEL_SOURCE }}
+            source_branch : ${{ inputs.KERNEL_SOURCE_BRANCH }}
+            clang_url : ${{ env.clang_url }}
+            deconfig : ${{ inputs.KERNEL_DEFCONFIG }}
+            device : ${{ env.DEVICE }}
+            ksu_v : ${{ env.KSUV }}
+          artifacts: '666/*'
+
+    - name: 上传
+      if: inputs.upload  == '0'
+      run: |
+          curl -sL https://raw.githubusercontent.com/zhlhlf/text/refs/heads/main/upload/upload.sh | bash -s ${{ secrets.RCK }}

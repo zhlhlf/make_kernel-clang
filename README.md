@@ -1,1 +1,25 @@
 # make_kernel-clang
+```
+https://github.com/ppajda/android_kernel_oneplus_sm8250
+```
+```
+https://github.com/OnePlusOSS/android_kernel_oneplus_sm8250
+```
+```
+https://github.com/HELLBOY017/kernel_oneplus_sm8250
+```
+```
+https://github.com/crdroidandroid/android_kernel_oneplus_sm8250
+```
+```
+https://github.com/ArrowOS-Devices/android_kernel_oneplus_sm8250
+```
+```
+https://github.com/Nameless-AOSP-OSS/kernel_oneplus_sm8250
+```
+```
+https://github.com/zhlhlf/android_kernel_oneplus_sm8250
+```
+```
+https://github.com/libxzr/android_kernel_oneplus_sm8250
+```
