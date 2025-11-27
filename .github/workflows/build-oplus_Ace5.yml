@@ -1,15 +1,13 @@
 name: 构建SM8650-Ace5内核
 
 on:
-  workflow_call:
-    inputs:
-      shell:
-        required: false
-        type: boolean
-        default: false
-        
   workflow_dispatch:
-  
+      inputs:
+        shell:
+          required: false
+          type: boolean
+          default: false
+        
 jobs:
   
   build:
