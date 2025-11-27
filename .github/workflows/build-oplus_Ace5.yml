@@ -5,8 +5,7 @@ on:
       inputs:
         shell:
           required: false
-          type: boolean
-          default: false
+          default: ''
         
 jobs:
   
